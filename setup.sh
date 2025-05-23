@@ -39,16 +39,10 @@ if [ ! -d "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting" ]
 fi
 
 # Configure ZSH
-cat << 'EOF' > ~/.zshrc
-export ZSH="$HOME/.oh-my-zsh"
-ZSH_THEME="powerlevel10k/powerlevel10k"
-plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
-
-source $ZSH/oh-my-zsh.sh
-[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
-
-alias ws="cd /workspace"
-EOF
+if [ ! -f ~/.zshrc ]; then
+  echo "🔁 Copying default .zshrc..."
+  cp /workspace/.zshrc ~/.zshrc
+fi
 
 # Set default shell to ZSH
 chsh -s $(which zsh)
