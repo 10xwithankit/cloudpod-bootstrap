@@ -144,3 +144,15 @@ if [[ "$START_ZSH" == "true" ]]; then
   source "$WORKSPACE/.venv/bin/activate" || true
   exec zsh
 fi
+
+# === SSH Key Injection from RunPod UI ===
+echo "🔐 Injecting public SSH key from PUBLIC_KEY env..."
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+if [[ -n "$PUBLIC_KEY" ]]; then
+  echo "$PUBLIC_KEY" > /root/.ssh/authorized_keys
+  chmod 600 /root/.ssh/authorized_keys
+  echo "✅ SSH key injected from RunPod PUBLIC_KEY"
+else
+  echo "⚠️ No PUBLIC_KEY found. Add it in your RunPod account."
+fi
