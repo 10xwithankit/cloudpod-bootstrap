@@ -5,9 +5,9 @@ set -e  # Exit on any error
 echo "🚀 Starting cloudpod-bootstrap setup..."
 
 # === Essentials ===
-echo "📦 Installing system packages..."
-apt update && apt install -y \
-  curl git nano zsh python3 python3-pip python3-venv unzip wget aria2
+# echo "📦 Installing system packages..."
+# apt update && apt install -y \
+#   curl git nano zsh python3 python3-pip python3-venv unzip wget aria2
 
 # === Cloudflared CLI ===
 echo "☁️ Installing Cloudflare tunnel CLI..."
