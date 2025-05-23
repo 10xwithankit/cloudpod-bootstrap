@@ -1,19 +1,32 @@
 #!/bin/bash
 
-set -e  # Exit on any error
+set -euxo pipefail  # Stricter error handling
+
+# Configurable workspace path
+WORKSPACE="/workspace"
+
+# Check for root, use sudo if not root
+if [ "$EUID" -ne 0 ]; then
+  SUDO="sudo"
+else
+  SUDO=""
+fi
+
+# Ensure required directories exist
+mkdir -p "$WORKSPACE/.cloudflared" "$WORKSPACE/.hf"
 
 # Navigate to workspace
-cd /workspace || true
+cd "$WORKSPACE" || true
 
 echo "🚀 Starting cloudpod-bootstrap setup..."
 
 # === Essentials ===
 echo "📦 Installing system packages..."
-# Check if packages are already installed
+$SUDO apt update
 for pkg in curl git nano zsh python3 python3-pip python3-venv unzip wget aria2; do
-  if ! dpkg -l | grep -q "$pkg"; then
+  if ! dpkg -s "$pkg" &>/dev/null; then
     echo "Installing $pkg..."
-    apt install -y "$pkg"
+    $SUDO apt install -y "$pkg"
   else
     echo "$pkg is already installed."
   fi
@@ -25,20 +38,20 @@ if ! command -v cloudflared &> /dev/null; then
   echo "Downloading cloudflared..."
   wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
   chmod +x cloudflared-linux-amd64
-  mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
+  $SUDO mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
 else
   echo "cloudflared is already installed."
 fi
 
 # === ZSH and Oh My Zsh ===
 echo "🎨 Setting up ZSH environment..."
-# Check if ZSH is installed
 if ! command -v zsh &> /dev/null; then
   echo "ZSH not found, installing..."
-  apt install -y zsh
+  $SUDO apt install -y zsh
 fi
 
-# Only install Oh My Zsh if it’s not installed
+# Only install Oh My Zsh if it's not installed
+export RUNZSH=no
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
   echo "Installing Oh My Zsh..."
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
@@ -66,25 +79,24 @@ fi
 # Configure ZSH
 if [ ! -f ~/.zshrc ]; then
   echo "🔁 Copying default .zshrc..."
-  cp /workspace/.zshrc ~/.zshrc
+  cp "$WORKSPACE/.zshrc" ~/.zshrc
 fi
 
 # Set default shell to ZSH
 chsh -s $(which zsh) 2>/dev/null || true
 
 # === Hugging Face token + cache ===
-export HF_HOME=${HF_HOME:-/workspace/.hf/home}
-mkdir -p /workspace/.hf
+export HF_HOME=${HF_HOME:-$WORKSPACE/.hf/home}
 mkdir -p "$HF_HOME"
 
-cd /workspace || true
-
 echo "🐍 Creating and activating virtualenv..."
-python3 -m venv /workspace/.venv
-source /workspace/.venv/bin/activate
+if [ ! -d "$WORKSPACE/.venv" ]; then
+  python3 -m venv "$WORKSPACE/.venv"
+fi
+source "$WORKSPACE/.venv/bin/activate"
 
-echo "✅ Virtualenv created at /workspace/.venv"
-echo "💡 To use it: source /workspace/.venv/bin/activate"
+echo "✅ Virtualenv ready at $WORKSPACE/.venv"
+echo "💡 To use it: source $WORKSPACE/.venv/bin/activate"
 
 echo "📦 Installing huggingface_hub CLI..."
 pip install --upgrade pip
@@ -97,16 +109,15 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 if [[ -n "$HF_TOKEN" && "$HF_TOKEN" != *"PLEASE_CHANGE_THIS"* ]]; then
   echo "🔐 Logging in with HF_TOKEN from env..."
   huggingface-cli login --token "$HF_TOKEN" --add-to-git-credential
-elif [[ -f /workspace/.hf/token.txt ]]; then
+elif [[ -f $WORKSPACE/.hf/token.txt ]]; then
   echo "🔐 Logging in with token from .hf/token.txt..."
-  huggingface-cli login --token $(cat /workspace/.hf/token.txt) --add-to-git-credential
+  huggingface-cli login --token $(cat $WORKSPACE/.hf/token.txt) --add-to-git-credential
 else
   echo "⚠️ No Hugging Face token provided. Model downloads may fail."
 fi
 
 # === Cloudflare tunnel config ===
-mkdir -p /workspace/.cloudflared
-ln -sf /workspace/.cloudflared ~/.cloudflared
+ln -sf "$WORKSPACE/.cloudflared" ~/.cloudflared
 
 # === Powerlevel10k config ===
 if [[ ! -f ~/.p10k.zsh ]]; then
@@ -121,6 +132,6 @@ echo "💡 You can now run: bash run.sh or exec zsh"
 # Optional auto-start
 if [[ "$START_ZSH" == "true" ]]; then
   echo "✨ Launching ZSH shell..."
-  source /workspace/.venv/bin/activate || true
+  source "$WORKSPACE/.venv/bin/activate" || true
   exec zsh
 fi
