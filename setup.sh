@@ -19,22 +19,29 @@ ssh-keygen -A
 service ssh restart || /etc/init.d/ssh restart
 
 # === ZSH Setup ===
+if ! command -v zsh &>/dev/null; then
+  echo "❌ Zsh is not installed. Setup aborted early."
+  exit 1
+fi
+
 export RUNZSH=no
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$ZSH_CUSTOM/themes/powerlevel10k" || true
-git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions" || true
-git clone https://github.com/zsh-users/zsh-syntax-highlighting "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" || true
+[ -d "$ZSH_CUSTOM/themes/powerlevel10k" ] || git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$ZSH_CUSTOM/themes/powerlevel10k"
+[ -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] || git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+[ -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ] || git clone https://github.com/zsh-users/zsh-syntax-highlighting "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
 
 if [ ! -f ~/.zshrc ]; then
-  cat <<EOF > ~/.zshrc
-export ZSH="\$HOME/.oh-my-zsh"
+  cat <<'EOF' > ~/.zshrc
+export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="powerlevel10k/powerlevel10k"
 plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
-source \$ZSH/oh-my-zsh.sh
+source $ZSH/oh-my-zsh.sh
+[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
+alias ws="cd /workspace"
 EOF
 fi
 
@@ -45,7 +52,9 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install huggingface_hub torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
+# === Bash fallback ===
+grep 'cd /workspace' ~/.bashrc || echo 'cd /workspace' >> ~/.bashrc
+grep 'source /workspace/.venv/bin/activate' ~/.bashrc || echo 'source /workspace/.venv/bin/activate || true' >> ~/.bashrc
+grep 'exec zsh' ~/.bashrc || echo 'command -v zsh && exec zsh || true' >> ~/.bashrc
+
 echo "✅ setup.sh done"
-echo 'cd /workspace' >> ~/.bashrc
-echo 'source /workspace/.venv/bin/activate || true' >> ~/.bashrc
-echo 'command -v zsh && exec zsh || true' >> ~/.bashrc
