@@ -22,7 +22,7 @@ echo "🚀 Starting cloudpod-bootstrap setup..."
 
 # === Essentials ===
 echo "📦 Installing system packages..."
-$SUDO apt update
+$SUDO apt update -q
 for pkg in curl git nano zsh python3 python3-pip python3-venv unzip wget aria2; do
   if ! dpkg -s "$pkg" &>/dev/null; then
     echo "Installing $pkg..."
@@ -37,8 +37,14 @@ echo "☁️ Installing Cloudflare tunnel CLI..."
 if ! command -v cloudflared &> /dev/null; then
   echo "Downloading cloudflared..."
   wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-  chmod +x cloudflared-linux-amd64
-  $SUDO mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
+  # Verify the download was successful
+  if [ $? -eq 0 ]; then
+    chmod +x cloudflared-linux-amd64
+    $SUDO mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
+  else
+    echo "Error: Failed to download cloudflared."
+    exit 1
+  fi
 else
   echo "cloudflared is already installed."
 fi
@@ -83,7 +89,12 @@ if [ ! -f ~/.zshrc ]; then
 fi
 
 # Set default shell to ZSH
-chsh -s $(which zsh) 2>/dev/null || true
+if [[ "$SHELL" != "$(which zsh)" ]]; then
+  echo "Changing default shell to ZSH..."
+  chsh -s $(which zsh) 2>/dev/null || true
+else
+  echo "ZSH is already the default shell."
+fi
 
 # === Hugging Face token + cache ===
 export HF_HOME=${HF_HOME:-$WORKSPACE/.hf/home}
