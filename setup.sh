@@ -46,3 +46,6 @@ pip install --upgrade pip
 pip install huggingface_hub torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 echo "✅ setup.sh done"
+echo 'cd /workspace' >> ~/.bashrc
+echo 'source /workspace/.venv/bin/activate || true' >> ~/.bashrc
+echo 'command -v zsh && exec zsh || true' >> ~/.bashrc
