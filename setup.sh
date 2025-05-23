@@ -51,6 +51,17 @@ chsh -s $(which zsh)
 export HF_HOME=${HF_HOME:-/workspace/.hf/home}
 mkdir -p "$HF_HOME"
 
+echo "🐍 Creating and activating virtualenv..."
+python3 -m venv /workspace/.venv
+source /workspace/.venv/bin/activate
+
+echo "✅ Virtualenv created at /workspace/.venv"
+echo "💡 To use it: source /workspace/.venv/bin/activate"
+
+echo "📦 Installing huggingface_hub CLI..."
+pip install --upgrade pip
+pip install huggingface_hub
+
 if [[ -n "$HF_TOKEN" && "$HF_TOKEN" != *"PLEASE_CHANGE_THIS"* ]]; then
   echo "🔐 Logging in with HF_TOKEN from env..."
   huggingface-cli login --token "$HF_TOKEN"
