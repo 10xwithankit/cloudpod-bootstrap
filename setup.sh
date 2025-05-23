@@ -2,6 +2,9 @@
 
 set -e  # Exit on any error
 
+cd /workspace || true
+
+
 echo "🚀 Starting cloudpod-bootstrap setup..."
 
 # === Essentials ===
@@ -45,12 +48,14 @@ if [ ! -f ~/.zshrc ]; then
 fi
 
 # Set default shell to ZSH
-chsh -s $(which zsh)
+chsh -s $(which zsh) 2>/dev/null || true
 
 # === Hugging Face token + cache ===
 export HF_HOME=${HF_HOME:-/workspace/.hf/home}
 mkdir -p /workspace/.hf
 mkdir -p "$HF_HOME"
+
+cd /workspace || true
 
 echo "🐍 Creating and activating virtualenv..."
 python3 -m venv /workspace/.venv
@@ -92,5 +97,6 @@ echo "💡 You can now run: bash run.sh or exec zsh"
 # Optional auto-start
 if [[ "$START_ZSH" == "true" ]]; then
   echo "✨ Launching ZSH shell..."
+  source /workspace/.venv/bin/activate || true
   exec zsh
 fi
