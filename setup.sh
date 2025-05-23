@@ -47,9 +47,11 @@ fi
 # Set default shell to ZSH
 chsh -s $(which zsh)
 
+mkdir -p /workspace/.hf
+mkdir -p "$HF_HOME"
 # === Hugging Face token + cache ===
 export HF_HOME=${HF_HOME:-/workspace/.hf/home}
-mkdir -p "$HF_HOME"
+
 
 echo "🐍 Creating and activating virtualenv..."
 python3 -m venv /workspace/.venv
@@ -75,4 +77,17 @@ fi
 # === Cloudflare tunnel config ===
 ln -sf /workspace/.cloudflared ~/.cloudflared
 
-echo "✅ Setup complete! You can now run: bash run.sh"
+echo "✅ Setup complete!"
+echo "💡 You can now run: bash run.sh or exec zsh"
+
+if [[ ! -f ~/.p10k.zsh ]]; then
+  echo "💎 Creating default Powerlevel10k config"
+  curl -s https://raw.githubusercontent.com/romkatv/powerlevel10k-media/master/config/p10k-classic.zsh -o ~/.p10k.zsh
+fi
+
+# Optional auto-start
+if [[ "$START_ZSH" == "true" ]]; then
+  echo "✨ Launching ZSH shell..."
+  exec zsh
+fi
+
