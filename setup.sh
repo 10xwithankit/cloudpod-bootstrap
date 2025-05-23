@@ -20,8 +20,7 @@ service ssh restart || /etc/init.d/ssh restart
 
 # === ZSH Setup ===
 if ! command -v zsh &>/dev/null; then
-  echo "❌ Zsh is not installed. Setup aborted early."
-  exit 1
+  apt update && apt install -y zsh
 fi
 
 export RUNZSH=no
