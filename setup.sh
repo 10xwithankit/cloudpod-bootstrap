@@ -23,7 +23,7 @@ echo "🚀 Starting cloudpod-bootstrap setup..."
 # === Essentials ===
 echo "📦 Installing system packages..."
 $SUDO apt update -q
-for pkg in curl git nano zsh python3 python3-pip python3-venv unzip wget aria2; do
+for pkg in curl git nano zsh python3 python3-pip python3-venv unzip wget aria2 openssh-server; do
   if ! dpkg -s "$pkg" &>/dev/null; then
     echo "Installing $pkg..."
     $SUDO apt install -y "$pkg"
@@ -37,16 +37,15 @@ echo "☁️ Installing Cloudflare tunnel CLI..."
 if ! command -v cloudflared &> /dev/null; then
   echo "Downloading cloudflared..."
   wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-  # Verify the download was successful
   if [ $? -eq 0 ]; then
     chmod +x cloudflared-linux-amd64
     $SUDO mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
   else
-    echo "Error: Failed to download cloudflared."
+    echo "❌ Failed to download cloudflared."
     exit 1
   fi
 else
-  echo "cloudflared is already installed."
+  echo "✅ cloudflared already installed."
 fi
 
 # === ZSH and Oh My Zsh ===
@@ -56,44 +55,35 @@ if ! command -v zsh &> /dev/null; then
   $SUDO apt install -y zsh
 fi
 
-# Only install Oh My Zsh if it's not installed
 export RUNZSH=no
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
   echo "Installing Oh My Zsh..."
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
-# Install Powerlevel10k theme and plugins if not already installed
+# Powerlevel10k and plugins
 if [ ! -d "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k" ]; then
-  echo "Installing Powerlevel10k theme..."
   git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
     ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k
 fi
-
 if [ ! -d "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions" ]; then
-  echo "Installing zsh-autosuggestions plugin..."
   git clone https://github.com/zsh-users/zsh-autosuggestions \
     ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 fi
-
 if [ ! -d "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting" ]; then
-  echo "Installing zsh-syntax-highlighting plugin..."
   git clone https://github.com/zsh-users/zsh-syntax-highlighting.git \
     ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 fi
 
-# Configure ZSH
+# Copy default .zshrc if missing
 if [ ! -f ~/.zshrc ]; then
   echo "🔁 Copying default .zshrc..."
-  cp "$WORKSPACE/.zshrc" ~/.zshrc
+  cp "$WORKSPACE/.zshrc" ~/.zshrc || echo "⚠️ Missing default .zshrc"
 fi
 
-# Set default shell to ZSH
+# Change default shell
 if [[ "$SHELL" != "$(which zsh)" ]]; then
-  echo "Changing default shell to ZSH..."
   chsh -s $(which zsh) 2>/dev/null || true
-else
-  echo "ZSH is already the default shell."
 fi
 
 # === Hugging Face token + cache ===
@@ -107,8 +97,6 @@ fi
 source "$WORKSPACE/.venv/bin/activate"
 
 echo "✅ Virtualenv ready at $WORKSPACE/.venv"
-echo "💡 To use it: source $WORKSPACE/.venv/bin/activate"
-
 echo "📦 Installing huggingface_hub CLI..."
 pip install --upgrade pip
 pip install huggingface_hub
@@ -116,12 +104,10 @@ pip install huggingface_hub
 echo "🧠 Installing PyTorch with CUDA 12.1 support..."
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-# Check if Hugging Face token exists in env or file
+# === Hugging Face Token Login ===
 if [[ -n "$HF_TOKEN" && "$HF_TOKEN" != *"PLEASE_CHANGE_THIS"* ]]; then
-  echo "🔐 Logging in with HF_TOKEN from env..."
   huggingface-cli login --token "$HF_TOKEN" --add-to-git-credential
 elif [[ -f $WORKSPACE/.hf/token.txt ]]; then
-  echo "🔐 Logging in with token from .hf/token.txt..."
   huggingface-cli login --token $(cat $WORKSPACE/.hf/token.txt) --add-to-git-credential
 else
   echo "⚠️ No Hugging Face token provided. Model downloads may fail."
@@ -132,17 +118,29 @@ ln -sf "$WORKSPACE/.cloudflared" ~/.cloudflared
 
 # === Powerlevel10k config ===
 if [[ ! -f ~/.p10k.zsh ]]; then
-  echo "💎 Creating default Powerlevel10k config"
   curl -s https://raw.githubusercontent.com/romkatv/powerlevel10k-media/master/config/p10k-classic.zsh -o ~/.p10k.zsh
 fi
+
+# === SSH Setup for External Access ===
+echo "🔐 Configuring SSH server..."
+$SUDO mkdir -p /run/sshd
+$SUDO ssh-keygen -A
+
+if command -v systemctl &> /dev/null; then
+  $SUDO systemctl enable ssh
+  $SUDO systemctl restart ssh || echo "⚠️ systemctl restart ssh failed"
+else
+  $SUDO service ssh restart || $SUDO /etc/init.d/ssh restart || echo "⚠️ SSH restart failed"
+fi
+
+# Confirm SSH is running
+ps aux | grep -v grep | grep -q "sshd" && echo "✅ SSH server running" || echo "❌ SSH server NOT running"
 
 # === Complete ===
 echo "✅ Setup complete!"
 echo "💡 You can now run: bash run.sh or exec zsh"
 
-# Optional auto-start
 if [[ "$START_ZSH" == "true" ]]; then
-  echo "✨ Launching ZSH shell..."
   source "$WORKSPACE/.venv/bin/activate" || true
   exec zsh
 fi
