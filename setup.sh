@@ -5,9 +5,9 @@ set -e  # Exit on any error
 echo "🚀 Starting cloudpod-bootstrap setup..."
 
 # === Essentials ===
-# echo "📦 Installing system packages..."
-# apt update && apt install -y \
-#   curl git nano zsh python3 python3-pip python3-venv unzip wget aria2
+echo "📦 Installing system packages..."
+apt update && apt install -y \
+  curl git nano zsh python3 python3-pip python3-venv unzip wget aria2
 
 # === Cloudflared CLI ===
 echo "☁️ Installing Cloudflare tunnel CLI..."
@@ -47,7 +47,6 @@ fi
 # Set default shell to ZSH
 chsh -s $(which zsh)
 
-
 # === Hugging Face token + cache ===
 export HF_HOME=${HF_HOME:-/workspace/.hf/home}
 mkdir -p /workspace/.hf
@@ -66,10 +65,10 @@ pip install huggingface_hub
 
 if [[ -n "$HF_TOKEN" && "$HF_TOKEN" != *"PLEASE_CHANGE_THIS"* ]]; then
   echo "🔐 Logging in with HF_TOKEN from env..."
-  huggingface-cli login --token "$HF_TOKEN"
+  huggingface-cli login --token "$HF_TOKEN" --add-to-git-credential
 elif [[ -f /workspace/.hf/token.txt ]]; then
   echo "🔐 Logging in with token from .hf/token.txt..."
-  huggingface-cli login --token $(cat /workspace/.hf/token.txt)
+  huggingface-cli login --token $(cat /workspace/.hf/token.txt) --add-to-git-credential
 else
   echo "⚠️ No Hugging Face token provided. Model downloads may fail."
 fi
@@ -77,17 +76,18 @@ fi
 # === Cloudflare tunnel config ===
 ln -sf /workspace/.cloudflared ~/.cloudflared
 
-echo "✅ Setup complete!"
-echo "💡 You can now run: bash run.sh or exec zsh"
-
+# === Powerlevel10k config ===
 if [[ ! -f ~/.p10k.zsh ]]; then
   echo "💎 Creating default Powerlevel10k config"
   curl -s https://raw.githubusercontent.com/romkatv/powerlevel10k-media/master/config/p10k-classic.zsh -o ~/.p10k.zsh
 fi
+
+# === Complete ===
+echo "✅ Setup complete!"
+echo "💡 You can now run: bash run.sh or exec zsh"
 
 # Optional auto-start
 if [[ "$START_ZSH" == "true" ]]; then
   echo "✨ Launching ZSH shell..."
   exec zsh
 fi
-
