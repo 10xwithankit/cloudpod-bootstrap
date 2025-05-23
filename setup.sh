@@ -63,6 +63,9 @@ echo "📦 Installing huggingface_hub CLI..."
 pip install --upgrade pip
 pip install huggingface_hub
 
+echo "🧠 Installing PyTorch with CUDA 12.1 support..."
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
 if [[ -n "$HF_TOKEN" && "$HF_TOKEN" != *"PLEASE_CHANGE_THIS"* ]]; then
   echo "🔐 Logging in with HF_TOKEN from env..."
   huggingface-cli login --token "$HF_TOKEN" --add-to-git-credential
