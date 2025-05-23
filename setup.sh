@@ -47,11 +47,11 @@ fi
 # Set default shell to ZSH
 chsh -s $(which zsh)
 
-mkdir -p /workspace/.hf
-mkdir -p "$HF_HOME"
+
 # === Hugging Face token + cache ===
 export HF_HOME=${HF_HOME:-/workspace/.hf/home}
-
+mkdir -p /workspace/.hf
+mkdir -p "$HF_HOME"
 
 echo "🐍 Creating and activating virtualenv..."
 python3 -m venv /workspace/.venv
